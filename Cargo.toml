@@ -7,6 +7,7 @@ edition = "2021"
 anyhow = "1.0.93"
 code-timing-macros = { version = "0.0.5", features = ["release"] }
 const_format = "0.2.33"
+image = "0.25.5"
 
 # Additional recommended dependencies
 itertools = "0.13.0"
