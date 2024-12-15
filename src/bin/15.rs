@@ -77,6 +77,8 @@ trait GetFree {
     fn get_free() -> Self where Self: Sized;
 }
 
+trait CommonCell:  FromChar + IsRobot + Display + Clone + Copy + IsComputable + GetFree {}
+
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum Cell {
     Free,
@@ -84,6 +86,8 @@ enum Cell {
     Box,
     Robot
 }
+
+impl CommonCell for Cell {}
 
 impl FromChar for Cell {
     fn from_char(ch: char) -> Vec<Self> {
@@ -137,6 +141,8 @@ enum Cell2 {
     RightBox,
     Robot,
 }
+
+impl CommonCell for Cell2 {}
 
 impl FromChar for Cell2 {
     fn from_char(ch: char) -> Vec<Self> {
@@ -223,11 +229,11 @@ impl Display for Move {
     }
 }
 
-struct Grid<T: FromChar + IsRobot + Display + Clone + Copy + IsComputable + GetFree> {
+struct Grid<T: CommonCell> {
     data: Vec<Vec<T>>,
 }
 
-impl<T: FromChar + IsRobot + Display + Clone + Copy + IsComputable + GetFree> Grid<T> {
+impl<T: CommonCell> Grid<T> {
     fn from(data: &Vec<String>) -> Self {
         let data = data
             .iter()
@@ -280,7 +286,7 @@ impl<T: FromChar + IsRobot + Display + Clone + Copy + IsComputable + GetFree> Gr
     }
 }
 
-impl<T:  FromChar + IsRobot + Display + Clone + Copy + IsComputable + GetFree> Display for Grid<T> {
+impl<T: CommonCell> Display for Grid<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for i in 0..self.n() {
             for j in 0..self.m() {
@@ -472,7 +478,7 @@ fn move_robot_2(robot: (usize, usize), movement: Move, grid: &mut Grid<Cell2>) -
     Ok(next_pos)
 }
 
-fn compute_value<T: FromChar + IsRobot + Display + Clone + Copy + IsComputable + GetFree>(grid: &Grid<T>) -> Result<usize> {
+fn compute_value<T: CommonCell>(grid: &Grid<T>) -> Result<usize> {
     let mut result = 0;
     for i in 0..grid.n() {
         for j in 0..grid.m() {
