@@ -1,10 +1,9 @@
 use anyhow::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::ptr::read;
 use code_timing_macros::time_snippet;
 use const_format::concatcp;
-use image::{RgbImage, Rgb, GenericImage};
+use image::{RgbImage, Rgb};
 use adv_code_2024::*;
 
 const DAY: &str = "14"; // TODO: Fill the day
@@ -145,7 +144,7 @@ fn main() -> Result<()> {
 
     let input_file = BufReader::new(File::open(INPUT_FILE)?);
     let result = time_snippet!(part2(input_file, 101, 103)?);
-    println!("XO-XO-XO");
+    println!("XO-XO-XO: {result}");
     //endregion
 
     Ok(())
