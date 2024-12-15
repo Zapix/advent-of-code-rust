@@ -7,7 +7,6 @@ use std::io::{BufRead, BufReader};
 use code_timing_macros::time_snippet;
 use const_format::concatcp;
 use adv_code_2024::*;
-use crate::Cell2::Wall;
 
 const DAY: &str = "15"; // TODO: Fill the day
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
@@ -47,18 +46,6 @@ vvv<<^>^v^^><<>>><>^<<><^vv^^<>vvv<>><^^v>^>vv<>v<<<<v<^v>^<^^>>>^<v<v
 <><^^>^^^<><vvvvv^v<v<<>^v<v>v<<^><<><<><<<^^<<<^<<>><<><^^^>^^<>^>v<>
 ^^>vv<^v^v<vv>^<><v<^v>^^^>>>^^vvv^>vvv<>>>^<^>>>>>^<<^v>^vvv<>^<><<v>
 v^^>>><<^^<>>^v^<v^vv<>v^<<>^<^v^v><^<<<><<^<v><v<>vv>>v><v^<vv<>v^<<^
-";
-
-const TEST_3: &str = "\
-#######
-#...#.#
-#.....#
-#..OO@#
-#..O..#
-#.....#
-#######
-
-<vv<<^^<<^^
 ";
 
 trait FromChar {
@@ -313,10 +300,7 @@ fn move_robot(robot: (usize, usize), movement: Move, grid: &mut Grid<Cell>) -> R
     let mut pos = robot;
     while grid.get(pos.0, pos.1)? == Cell::Robot || grid.get(pos.0, pos.1)? == Cell::Box {
         stack.push(pos);
-        pos = (
-            usize::try_from(pos.0 as i32 + movement.delta().0).context("Can't convert")?,
-            usize::try_from(pos.1 as i32 + movement.delta().1).context("Can't convert")?
-        );
+        pos = compute_next_position(&pos, &movement)?
     }
 
     match grid.get(pos.0, pos.1)? {
@@ -332,73 +316,12 @@ fn move_robot(robot: (usize, usize), movement: Move, grid: &mut Grid<Cell>) -> R
     }
 }
 
-fn can_move(pos: (usize, usize), movement: &Move, grid: &Grid<Cell2>) -> Result<bool> {
-    let cell = grid.get(pos.0, pos.1)?;
-    if cell == Cell2::Wall {
-        return Ok(false)
-    }
-    if cell == Cell2::Free {
-        return Ok(false)
-    }
-    let next_pos = (
-        usize::try_from(pos.0 as i32 + movement.delta().0).context("Can't convert")?,
-        usize::try_from(pos.1 as i32 + movement.delta().1).context("Can't convert")?
-    );
-    match movement {
-        Move::Left | Move::Right => {
-            let cell = grid.get(next_pos.0, next_pos.1)?;
-            Ok(cell != Cell2::Wall)
-        },
-        Move::Up | Move::Down => {
-            match grid.get(pos.0, pos.1)? {
-                Cell2::Robot => {
-                    let cell = grid.get(next_pos.0, next_pos.1)?;
-                    Ok(cell != Cell2::Wall)
-                },
-                Cell2::LeftBox => {
-                    let cell = grid.get(next_pos.0, next_pos.1)?;
-                    let right_cell = grid.get(next_pos.0, next_pos.1 + 1)?;
-                    Ok(cell != Cell2::Wall && right_cell == Cell2::Free)
-                },
-                Cell2::RightBox => {
-                    let cell = grid.get(next_pos.0, next_pos.1)?;
-                    let left_cell = grid.get(next_pos.0, next_pos.1 - 1)?;
-                    Ok(cell != Cell2::Wall && left_cell == Cell2::Free)
-                },
-                _ => Err(anyhow!("unexpected behavior"))
-            }
-        },
-    }
-}
-
 fn compute_next_position(pos: &(usize, usize), movement: &Move) -> Result<(usize, usize)> {
     let delta = movement.delta();
     Ok((
         usize::try_from(pos.0 as i32 + delta.0).context("can not parse")?,
         usize::try_from(pos.1 as i32 + delta.1).context("can not parse")?
     ))
-}
-
-fn move_element(pos: (usize, usize), movement: &Move, grid: &mut Grid<Cell2>) -> Result<(usize, usize)> {
-    match movement {
-        Move::Left | Move::Right => {
-            grid.move_cell(pos, movement)
-        },
-        _ => match grid.get(pos.0, pos.1)? {
-            Cell2::Robot => {  grid.move_cell(pos, movement) },
-            Cell2::LeftBox => {
-                let right_cell = (pos.0, pos.1 + 1);
-                grid.move_cell(right_cell, movement)?;
-                grid.move_cell(pos, movement)
-            }
-            Cell2::RightBox => {
-                let left_cell = (pos.0, pos.1 - 1);
-                grid.move_cell(left_cell, movement)?;
-                grid.move_cell(pos, movement)
-            }
-            _ => Err(anyhow!("unexpected behavior"))
-        }
-    }
 }
 
 fn is_free(positions: &Vec<(usize, usize)>, grid: &Grid<Cell2>) -> Result<bool> {
@@ -498,7 +421,7 @@ fn main() -> Result<()> {
 
     fn part1<R: BufRead>(reader: R) -> Result<usize> {
         // TODO: Solve Part 1 of the puzzle
-        let mut reader= reader.lines().flatten().collect::<Vec<_>>();
+        let reader= reader.lines().flatten().collect::<Vec<_>>();
         let raw_grid = reader.clone().into_iter().take_while(|x| !x.is_empty()).collect::<Vec<_>>();
         let mut grid: Grid<Cell> = Grid::from(&raw_grid);
         let mut robot = grid.robot().context("Robot not found")?;
@@ -527,11 +450,10 @@ fn main() -> Result<()> {
     println!("\n=== Part 2 ===");
 
     fn part2<R: BufRead>(reader: R) -> Result<usize> {
-        let mut reader= reader.lines().flatten().collect::<Vec<_>>();
+        let reader= reader.lines().flatten().collect::<Vec<_>>();
         let raw_grid = reader.clone().into_iter().take_while(|x| !x.is_empty()).collect::<Vec<_>>();
         let mut grid: Grid<Cell2> = Grid::from(&raw_grid);
         let mut robot = grid.robot().context("Robot not found")?;
-        println!("{}", grid);
 
         let raw_movements = reader.into_iter().skip_while(|x| !x.is_empty()).skip(1).collect::<Vec<_>>();
         for movement in get_movements(&raw_movements)? {
