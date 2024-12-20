@@ -6,6 +6,8 @@ use std::cmp::Reverse;
 use code_timing_macros::time_snippet;
 use const_format::concatcp;
 use adv_code_2024::*;
+use crate::maze::{Point, Grid, Direction, read_map, find_start_end_point, prev_position, next_position};
+
 
 const DAY: &str = "16"; // TODO: Fill the day
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
@@ -49,86 +51,8 @@ const TEST_2: &str = "\
 ";
 
 
-type Point = (usize, usize);
-
-fn find_start_end_point(grid: &Grid) -> (Point, Point) {
-    let mut start_point = None;
-    let mut end_point = None;
-    for i in 0..grid.len() {
-        for j in 0..grid[0].len() {
-            match grid[i][j] {
-                'E' => end_point = Some((i, j)),
-                'S' => start_point = Some((i, j)),
-                _ => {},
-            }
-        }
-    }
-    (start_point.unwrap(), end_point.unwrap())
-}
-type Grid = Vec<Vec<char>>;
-
-fn read_map<R: BufRead>(reader: R) -> Grid {
-    reader
-        .lines()
-        .flatten()
-        .map(|x| x.chars().collect::<Vec<_>>())
-        .collect::<Vec<_>>()
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-enum Direction {
-    East,
-    South,
-    West,
-    North,
-}
-
-impl Direction {
-    fn rotate_clockwise(&self) -> Direction {
-        match self {
-            Direction::East => Direction::South,
-            Direction::South => Direction::West,
-            Direction::West=> Direction::North,
-            Direction::North => Direction::East,
-        }
-    }
-
-    fn rotate_counterclockwise(&self) -> Direction {
-        match self {
-            Direction::East => Direction::North,
-            Direction::South => Direction::East,
-            Direction::West=> Direction::South,
-            Direction::North => Direction::West,
-        }
-    }
-
-    fn delta(&self) -> (i32, i32) {
-        match self {
-            Direction::East => (0, 1),
-            Direction::South => (1, 0),
-            Direction::West=> (0, -1),
-            Direction::North => (-1, 0),
-        }
-    }
-}
-
 type Position = (Point, Direction);
 
-fn next_position(point: &Point, direction: &Direction) -> Result<Point> {
-    let delta = direction.delta();
-    Ok((
-        usize::try_from(point.0 as i32 + delta.0)?,
-        usize::try_from(point.1 as i32 + delta.1)?,
-    ))
-}
-
-fn prev_position(point: &Point, direction: &Direction) -> Result<Point> {
-    let delta = direction.delta();
-    Ok((
-        usize::try_from(point.0 as i32 - delta.0)?,
-        usize::try_from(point.1 as i32 - delta.1)?,
-    ))
-}
 
 fn print_grid_with_seats(grid: &Grid, seats: &HashSet<Point>) {
     for i in 0..grid.len() {
