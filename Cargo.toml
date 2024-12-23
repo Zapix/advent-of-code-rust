@@ -12,3 +12,4 @@ image = "0.25.5"
 # Additional recommended dependencies
 itertools = "0.13.0"
 regex = "1.11.1"
+term = "1.0.1"
