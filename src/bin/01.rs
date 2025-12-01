@@ -1,23 +1,50 @@
+use adv_code_2024::*;
 use anyhow::*;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use code_timing_macros::time_snippet;
 use const_format::concatcp;
-use adv_code_2024::*;
-
-use std::collections::{HashMap};
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 
 const DAY: &str = "01"; // TODO: Fill the day
 const INPUT_FILE: &str = concatcp!("input/", DAY, ".txt");
 
+#[derive(Debug, Eq, PartialEq)]
+enum Rotation {
+    Left(i32),
+    Right(i32),
+}
+
+impl Rotation {
+    fn try_from(value: &str) -> Result<Rotation> {
+        let chars = value.chars().collect::<Vec<_>>();
+        let direction = chars[0];
+        let value = chars
+            .iter()
+            .skip(1)
+            .fold(0, |acc, &ch| acc * 10 + (ch as u8 - '0' as u8) as i32);
+
+        match direction {
+            'L' => Ok(Rotation::Left(value)),
+            'R' => Ok(Rotation::Right(value)),
+            _ => panic!("Unexpected condition"),
+        }
+    }
+}
+
 const TEST: &str = "\
-3   4
-4   3
-2   5
-1   3
-3   9
-3   3
+L68
+L30
+R48
+L5
+R60
+L55
+L1
+L99
+R14
+L82
 "; // TODO: Add the test input
+
+const MOD: i32 = 100;
 
 fn main() -> Result<()> {
     start_day(DAY);
@@ -26,24 +53,30 @@ fn main() -> Result<()> {
     println!("=== Part 1 ===");
 
     fn part1<R: BufRead>(reader: R) -> Result<usize> {
-        let mut first_list = Vec::new();
-        let mut second_list = Vec::new();
-        for value in reader.lines().flatten() {
-            let values = value.split("   ").collect::<Vec<_>>();
-            first_list.push(values[0].parse::<i32>().unwrap_or(0));
-            second_list.push(values[1].parse::<i32>().unwrap_or(0));
+        let rotations = reader
+            .lines()
+            .map(|x| Rotation::try_from(x?.as_str()))
+            .collect::<Result<Vec<_>>>()?;
+
+        let mut curr = 50i32;
+        let mut count = 0usize;
+
+        for rotation in rotations {
+            curr = match rotation {
+                Rotation::Left(x) => (curr - x + MOD) % MOD,
+                Rotation::Right(x) => (curr + x + MOD) % MOD,
+            };
+
+            if curr == 0 {
+                count += 1;
+            }
         }
-        first_list.sort();
-        second_list.sort();
-        let answer = first_list.iter()
-            .zip(second_list.iter())
-            .map(|x| (*x.0 - *x.1).abs() as usize)
-            .sum();
-        Ok(answer)
+
+        Ok(count)
     }
 
     // TODO: Set the expected answer for the test input
-    assert_eq!(11, part1(BufReader::new(TEST.as_bytes()))?);
+    assert_eq!(3, part1(BufReader::new(TEST.as_bytes()))?);
 
     let input_file = BufReader::new(File::open(INPUT_FILE)?);
     let result = time_snippet!(part1(input_file)?);
@@ -54,30 +87,44 @@ fn main() -> Result<()> {
     println!("\n=== Part 2 ===");
 
     fn part2<R: BufRead>(reader: R) -> Result<usize> {
-        let mut first_list = Vec::new();
-        let mut second_list = Vec::new();
-        for value in reader.lines().flatten() {
-            let values = value.split("   ").collect::<Vec<_>>();
-            first_list.push(values[0].parse::<i32>().unwrap_or(0));
-            second_list.push(values[1].parse::<i32>().unwrap_or(0));
+        let rotations = reader
+            .lines()
+            .map(|x| Rotation::try_from(x?.as_str()))
+            .collect::<Result<Vec<_>>>()?;
+
+        let mut curr = 50i32;
+        let mut count = 0usize;
+        let mut prev_zero = 0;
+
+        for rotation in rotations {
+            curr = match rotation {
+                Rotation::Left(x) => (curr - x),
+                Rotation::Right(x) => (curr + x),
+            };
+
+            if curr < 0 {
+                let inc_value = curr / (-1 * MOD) + 1 - prev_zero;
+                count += inc_value as usize;
+                curr = curr.rem_euclid(MOD);
+            } else if curr == 0 {
+                count += 1;
+            } else if curr >= 100 {
+                let inc_value = (curr / MOD).max(0);
+                count += inc_value as usize;
+                curr = curr.rem_euclid(MOD);
+            }
+
+            if curr == 0 {
+                prev_zero = 1;
+            } else {
+                prev_zero = 0;
+            }
         }
 
-        let values_counter= second_list
-            .iter()
-            .fold(HashMap::new(), |mut acc, item| {
-                *acc.entry(*item).or_insert(0) += 1;
-                acc
-            });
-
-        let answer = first_list
-            .iter()
-            .map(|x| (*x * *values_counter.get(x).unwrap_or(&0)) as usize)
-            .sum();
-
-        Ok(answer)
+        Ok(count)
     }
 
-    assert_eq!(31, part2(BufReader::new(TEST.as_bytes()))?);
+    assert_eq!(6, part2(BufReader::new(TEST.as_bytes()))?);
 
     let input_file = BufReader::new(File::open(INPUT_FILE)?);
     let result = time_snippet!(part2(input_file)?);
